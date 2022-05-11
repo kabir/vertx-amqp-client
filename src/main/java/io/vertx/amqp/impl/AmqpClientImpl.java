@@ -20,7 +20,9 @@ import io.vertx.core.*;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.future.PromiseInternal;
 import io.vertx.proton.ProtonClient;
+import io.vertx.proton.impl.ProtonClientImpl;
 
+import javax.net.ssl.SSLContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -46,6 +48,21 @@ public class AmqpClientImpl implements AmqpClient {
     this.mustCloseVertxOnClose = mustCloseVertxOnClose;
   }
 
+  /**
+   * Must be called before calling connect()
+   * @deprecated Internal use only
+   */
+  @Deprecated
+  public void setSuppliedSSLContext(SSLContext suppliedSSLContext) {
+    if (suppliedSSLContext != null) {
+      if (proton instanceof ProtonClientImpl) {
+        ((ProtonClientImpl)proton).setSuppliedSSLContext(suppliedSSLContext);
+      } else {
+        // TODO log warning?
+      }
+    }
+  }
+
   @Override
   public AmqpClient connect(Handler<AsyncResult<AmqpConnection>> connectionHandler) {
     Objects.requireNonNull(connectionHandler, "Handler must not be null");
@@ -59,6 +76,7 @@ public class AmqpClientImpl implements AmqpClient {
     ContextInternal ctx = (ContextInternal) vertx.getOrCreateContext();
     PromiseInternal<AmqpConnection> promise = ctx.promise();
     new AmqpConnectionImpl(ctx, options, proton, promise);
+
     Future<AmqpConnection> future = promise.future();
     future.onSuccess(conn -> {
       connections.add(conn);
